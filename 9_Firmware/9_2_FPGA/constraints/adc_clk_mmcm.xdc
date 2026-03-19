@@ -56,7 +56,10 @@ set_false_path -from [get_clocks clk_120m_dac] -to [get_clocks clk_mmcm_out0]
 # --------------------------------------------------------------------------
 # MMCM Locked — asynchronous status signal, no timing paths needed
 # --------------------------------------------------------------------------
-set_false_path -from [get_pins rx_inst/adc/mmcm_inst/mmcm_adc_400m/LOCKED]
+# LOCKED is not a valid timing startpoint (it's a combinational output of the
+# MMCM primitive). Use -through instead of -from to waive all paths that pass
+# through the LOCKED net. This avoids the CRITICAL WARNING from Build 19/20.
+set_false_path -through [get_pins rx_inst/adc/mmcm_inst/mmcm_adc_400m/LOCKED]
 
 # --------------------------------------------------------------------------
 # Hold waiver for BUFIO→MMCM domain transfer (if Vivado flags hold violations)

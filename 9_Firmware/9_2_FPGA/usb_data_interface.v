@@ -228,8 +228,6 @@ always @(posedge ft601_clk_in or negedge ft601_reset_n) begin
         doppler_real_cap   <= 16'd0;
         doppler_imag_cap   <= 16'd0;
         cfar_detection_cap <= 1'b0;
-        doppler_data_pending <= 1'b0;
-        cfar_data_pending    <= 1'b0;
         // Fix #5: Default to range-only on reset (prevents write FSM deadlock)
         stream_ctrl_sync_0 <= 3'b001;
         stream_ctrl_sync_1 <= 3'b001;
@@ -280,11 +278,9 @@ always @(posedge ft601_clk_in or negedge ft601_reset_n) begin
         if (doppler_valid_sync[1] && !doppler_valid_sync_d) begin
             doppler_real_cap <= doppler_real_hold;
             doppler_imag_cap <= doppler_imag_hold;
-            doppler_data_pending <= 1'b1;
         end
         if (cfar_valid_sync[1] && !cfar_valid_sync_d) begin
             cfar_detection_cap <= cfar_detection_hold;
-            cfar_data_pending <= 1'b1;
         end
     end
 end
@@ -318,11 +314,21 @@ always @(posedge ft601_clk_in or negedge ft601_reset_n) begin
         cmd_opcode <= 8'd0;
         cmd_addr <= 8'd0;
         cmd_value <= 16'd0;
+        doppler_data_pending <= 1'b0;
+        cfar_data_pending <= 1'b0;
         // NOTE: ft601_clk_out is driven by the clk-domain always block below.
         // Do NOT assign it here (ft601_clk_in domain) — causes multi-driven net.
     end else begin
         // Default: clear one-shot signals
         cmd_valid <= 1'b0;
+
+        // Data-pending flag management: set on valid edge, cleared when
+        // consumed or skipped by write FSM. Must be in this always block
+        // (not the CDC sync block) to avoid Vivado multiple-driver DRC error.
+        if (doppler_valid_ft)
+            doppler_data_pending <= 1'b1;
+        if (cfar_valid_ft)
+            cfar_data_pending <= 1'b1;
 
         // ================================================================
         // READ FSM — host-to-FPGA command path (Gap 4)
